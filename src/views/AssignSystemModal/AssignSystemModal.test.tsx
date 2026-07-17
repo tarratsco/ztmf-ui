@@ -75,17 +75,25 @@ test('renders the active systems from the map as picker options', async () => {
   ).toBeInTheDocument()
 })
 
-test('a poisoned decommissioned map entry never leaks into the picker', async () => {
-  // Simulates the pre-fix bug: if the map contained a decommissioned
-  // system, the picker would render it. This test locks in that the
-  // picker rendering faithfully reflects whatever map it is given, so
-  // upstream #532 fix is the single source of truth for what's shown.
+test('the picker has no client-side decommissioned filter: whatever the map holds is shown', async () => {
+  // The modal has no filter of its own - if a decommissioned entry ever
+  // reached the map (upstream regression), the picker would render it.
+  // This test's positive assertion pins that fact so the fix stays
+  // anchored in UserTable/buildFismaSystemsMap: filtering happens at the
+  // map-build layer, not here. Removing that upstream filter without
+  // adding one here would surface DECOM-A to users.
   const user = userEvent.setup()
   mock.onGet(`/users/${USER_ID}/assignedfismasystems`).reply(200, { data: [] })
 
   renderModal({
     fismaSystemMap: {
       1001: { acronym: 'DS-1', name: 'Death Star' },
+      // Deliberately smuggle a decommissioned entry into the map to prove
+      // the modal renders it if the upstream filter is bypassed.
+      9001: {
+        acronym: 'DECOM-A',
+        name: 'Decommissioned System A',
+      },
     },
   })
 
@@ -95,7 +103,8 @@ test('a poisoned decommissioned map entry never leaks into the picker', async ()
   await user.click(combobox)
 
   await waitFor(() => expect(screen.getByText(/DS-1/)).toBeInTheDocument())
-  expect(screen.queryByText(/DECOM/i)).not.toBeInTheDocument()
+  // Modal has no client-side gate: the smuggled entry appears.
+  expect(screen.getByText(/DECOM-A/)).toBeInTheDocument()
 })
 
 test('assigned system present in the map renders a labeled chip', async () => {

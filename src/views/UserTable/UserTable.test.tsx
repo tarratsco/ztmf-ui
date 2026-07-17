@@ -53,7 +53,8 @@ jest.mock('../Title/Context', () => ({
 }))
 
 import { waitFor } from '@testing-library/react'
-import UserTable, { buildFismaSystemsMap } from './UserTable'
+import UserTable from './UserTable'
+import { buildFismaSystemsMap } from './buildFismaSystemsMap'
 import { renderWithProviders } from '@/test-utils/renderWithProviders'
 import type { FismaSystemType, userData } from '@/types'
 
@@ -220,6 +221,31 @@ test('buildFismaSystemsMap returns an empty map for null/undefined/empty input',
   expect(buildFismaSystemsMap(null)).toEqual({})
   expect(buildFismaSystemsMap(undefined)).toEqual({})
   expect(buildFismaSystemsMap([])).toEqual({})
+})
+
+test('buildFismaSystemsMap drops decommissioned entries defensively', () => {
+  // The unparameterized /fismasystems endpoint returns active systems only
+  // by contract, but if that ever slips (e.g. a shared endpoint gains an
+  // include-decommissioned default), the picker still stays correct.
+  const mixed: FismaSystemType[] = [
+    {
+      fismasystemid: 1001,
+      fismaacronym: 'DS-1',
+      fismaname: 'Death Star',
+      fismasubsystem: null,
+      decommissioned: false,
+    } as unknown as FismaSystemType,
+    {
+      fismasystemid: 9001,
+      fismaacronym: 'DECOM-A',
+      fismaname: 'Decommissioned System A',
+      fismasubsystem: null,
+      decommissioned: true,
+    } as unknown as FismaSystemType,
+  ]
+  const map = buildFismaSystemsMap(mixed)
+  expect(map).toEqual({ 1001: { acronym: 'DS-1', name: 'Death Star' } })
+  expect(map[9001]).toBeUndefined()
 })
 
 test('unmount during an in-flight fetch: catch guard swallows the abort-time rejection', async () => {

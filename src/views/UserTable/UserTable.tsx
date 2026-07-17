@@ -30,6 +30,7 @@ import Tooltip from '@mui/material/Tooltip'
 import './UserTable.css'
 import axiosInstance from '@/axiosConfig'
 import { users, OpDiv, FismaSystemType } from '@/types'
+import { buildFismaSystemsMap } from './buildFismaSystemsMap'
 import {
   isAdmin as checkIsAdmin,
   hasAdminRead,
@@ -134,30 +135,6 @@ function EditToolbar(props: EditToolbarProps) {
 }
 function validateEmail(email: string) {
   return /^[a-zA-Z0-9._:$!%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+$/.test(email)
-}
-
-/**
- * Reshape a FismaSystemType[] into the {id: {acronym, name}} map the
- * Assign Systems picker consumes. Exported so the map-build logic can be
- * unit tested against the same fixtures the parent fetch test uses,
- * without having to drive the DataGrid + modal chain end to end.
- *
- * @param systems - The active FISMA systems returned by GET /fismasystems.
- * @returns A map keyed by fismasystemid with a display-ready label pair.
- */
-export function buildFismaSystemsMap(
-  systems: FismaSystemType[] | null | undefined
-): Record<number, { name: string; acronym: string }> {
-  const map: Record<number, { name: string; acronym: string }> = {}
-  for (const obj of systems ?? []) {
-    map[obj.fismasystemid] = {
-      name: obj.fismasubsystem
-        ? obj.fismaname + ' - ' + obj.fismasubsystem
-        : obj.fismaname,
-      acronym: obj.fismaacronym,
-    }
-  }
-  return map
 }
 export default function UserTable() {
   const apiRef = useGridApiRef()
