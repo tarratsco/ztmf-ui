@@ -325,13 +325,9 @@ export default function AssignSystemModal({
         title="Confirm Unassign System"
         confirmationText={
           pendingUnassign
-            ? `Are you sure you want to unassign ${
-                systemMap[pendingUnassign.systemid]?.acronym ?? 'this system'
-              }${
-                systemMap[pendingUnassign.systemid]
-                  ? ` - ${systemMap[pendingUnassign.systemid].name}`
-                  : ''
-              } from ${userName || 'this user'}?`
+            ? `Are you sure you want to unassign ${labelFor(
+                pendingUnassign.systemid
+              )} from ${userName || 'this user'}?`
             : ''
         }
         open={pendingUnassign !== null}

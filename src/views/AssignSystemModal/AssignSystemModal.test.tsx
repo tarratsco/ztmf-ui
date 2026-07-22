@@ -503,10 +503,48 @@ test('a decommissioned assignment is still removable', async () => {
   expect(deleteIcon).not.toBeNull()
 
   await user.click(deleteIcon as HTMLElement)
-  await screen.findByText(/unassign SSD-EX/i)
+  // The prompt names the assignment exactly as the chip does, suffix and
+  // all. A hand-rolled string here would drop the suffix and leave the
+  // admin reading two different labels for the same assignment.
+  await screen.findByText(
+    /unassign SSD-EX\s*-\s*Super Star Destroyer Executor\s*-\s*Flagship Communication Hub\s*\(Decommissioned\)\s*from Admiral Piett/i
+  )
   await user.click(screen.getByRole('button', { name: /^confirm$/i }))
 
   await waitFor(() => expect(mock.history.delete.length).toBe(1))
+})
+
+test('the confirm prompt for an unresolvable id matches the chip label', async () => {
+  // Pairs with the blank-chip guard above. When no source can name the
+  // system, the chip falls back to an id-based label; the prompt must use
+  // the same one rather than a vaguer "this system", so the admin can tell
+  // which assignment they are revoking.
+  const user = userEvent.setup()
+  mock
+    .onGet(`/users/${USER_ID}/assignedfismasystems`)
+    .reply(200, { data: [9999] })
+  mock
+    .onGet(`/users/${USER_ID}/assignablefismasystems`)
+    .reply(200, { data: [DS1] })
+  mock.onDelete(`/users/${USER_ID}/assignedfismasystems/9999`).reply(200, {})
+
+  renderModal({ allSystems: [], decommSystems: [] })
+
+  await waitFor(() =>
+    expect(document.body.querySelectorAll('.MuiChip-root').length).toBe(1)
+  )
+  const chipLabel = (
+    document.body.querySelector('.MuiChip-label') as HTMLElement
+  ).textContent
+
+  await user.click(
+    document.body.querySelector('.MuiChip-deleteIcon') as HTMLElement
+  )
+  const prompt = await screen.findByText(/Are you sure you want to unassign/i)
+  expect(prompt.textContent).toContain(chipLabel)
+  expect(prompt.textContent).toMatch(
+    /unassign Unknown or decommissioned system \(id 9999\) from Admiral Piett/i
+  )
 })
 
 test('a failing assigned read still leaves the dropdown usable', async () => {
